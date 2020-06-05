@@ -7,10 +7,11 @@ export const updateSelectedServices = (
 ) => {
     switch (action.type) {
         case "Select":
-            return previouslySelectedServices.push(action.service);
+            return [...previouslySelectedServices, action.service];
         case "Deselect":
-            let index = previouslySelectedServices.indexOf(action.service);
-            return index > -1 ? previouslySelectedServices.splice(index, 1) : previouslySelectedServices;
+            return previouslySelectedServices.filter(s => s !== action.service);
+        default:
+            return previouslySelectedServices;
     }
 };
 
