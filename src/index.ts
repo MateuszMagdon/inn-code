@@ -19,7 +19,7 @@ function selectAction(state: ServiceType[], service: ServiceType): ServiceType[]
     const alreadyExists = state.includes(service);
     const serviceObject = mainServices.find(s => s.type === service);
     const canBeAdded = !serviceObject.applicableIf
-        || state.filter(val => serviceObject.applicableIf.includes(val)).length > 0;
+        || intersectArrays(state, serviceObject.applicableIf).length > 0;
 
     return !alreadyExists && canBeAdded ? [...state, service] : state;
 }
@@ -29,10 +29,15 @@ function deselectAction(state: ServiceType[], service: ServiceType): ServiceType
     const newStateObjects = mainServices.filter(s => newState.includes(s.type));
     const toRemove = newStateObjects
         .filter(
-            s => s.applicableIf && s.applicableIf.filter(val => newState.includes(val)).length === 0)
+            s => s.applicableIf
+            && intersectArrays(s.applicableIf, newState).length === 0)
         .map(s => s.type);
 
     return newState.filter(s => !toRemove.includes(s))
+}
+
+function intersectArrays(array1: ServiceType[], array2: ServiceType[]): ServiceType[] {
+    return array1.filter(el => array2.includes(el));
 }
 
 export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) => ({ basePrice: 0, finalPrice: 0 });
