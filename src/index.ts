@@ -40,7 +40,20 @@ function intersectArrays(array1: ServiceType[], array2: ServiceType[]): ServiceT
     return array1.filter(el => array2.includes(el));
 }
 
-export const calculatePrice = (selectedServices: ServiceType[], selectedYear: ServiceYear) => ({ basePrice: 0, finalPrice: 0 });
+export const calculatePrice = (
+    selectedServices: ServiceType[],
+    selectedYear: ServiceYear
+) => {
+    let basePrice = 0;
+
+    selectedServices.forEach(service => {
+        const serviceObject = mainServices.find(s => s.type === service);
+        basePrice += serviceObject.price ? serviceObject.price : serviceObject.priceList.find(p => p.year === selectedYear).price;
+    });
+
+    let finalPrice = basePrice;
+    return {basePrice: basePrice, finalPrice: finalPrice};
+};
 
 interface Service {
     type: ServiceType,
@@ -50,7 +63,7 @@ interface Service {
 }
 
 interface PriceInYear {
-    year: number,
+    year: ServiceYear,
     price: number
 }
 
