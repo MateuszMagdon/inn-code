@@ -18,8 +18,8 @@ export const updateSelectedServices = (
 function selectAction(state: ServiceType[], service: ServiceType): ServiceType[] {
     const alreadyExists = state.includes(service);
     const serviceObject = mainServices.find(s => s.type === service);
-    const canBeAdded = !serviceObject.applicableIf
-        || intersectArrays(state, serviceObject.applicableIf).length > 0;
+    const canBeAdded = !serviceObject.requiredService
+        || intersectArrays(state, serviceObject.requiredService).length > 0;
 
     return !alreadyExists && canBeAdded ? [...state, service] : state;
 }
@@ -29,8 +29,8 @@ function deselectAction(state: ServiceType[], service: ServiceType): ServiceType
     const newStateObjects = mainServices.filter(s => newState.includes(s.type));
     const toRemove = newStateObjects
         .filter(
-            s => s.applicableIf
-            && intersectArrays(s.applicableIf, newState).length === 0)
+            s => s.requiredService
+            && intersectArrays(s.requiredService, newState).length === 0)
         .map(s => s.type);
 
     return newState.filter(s => !toRemove.includes(s))
@@ -45,13 +45,29 @@ export const calculatePrice = (
     selectedYear: ServiceYear
 ) => {
     let basePrice = 0;
+    let finalPrice = basePrice;
 
     selectedServices.forEach(service => {
         const serviceObject = mainServices.find(s => s.type === service);
-        basePrice += serviceObject.price ? serviceObject.price : serviceObject.priceList.find(p => p.year === selectedYear).price;
+        const oridinalPrice = serviceObject.price ?
+            serviceObject.price :
+            serviceObject.priceList.find(p => p.year === selectedYear).price;
+
+        basePrice += oridinalPrice;
+
+        const applicableDiscounts = !serviceObject.discounts ? null
+            : serviceObject.discounts
+                .filter(
+                    d => (!d.requiredYear || d.requiredYear === selectedYear)
+                        && (!d.requiredService || selectedServices.includes(d.requiredService)));
+
+        const discountedPrice = !applicableDiscounts || !(applicableDiscounts.length > 0) ?
+            oridinalPrice
+            : Math.min(...applicableDiscounts.map(d => d.price));
+
+        finalPrice += discountedPrice;
     });
 
-    let finalPrice = basePrice;
     return {basePrice: basePrice, finalPrice: finalPrice};
 };
 
@@ -59,7 +75,8 @@ interface Service {
     type: ServiceType,
     price?: number,
     priceList?: PriceInYear[],
-    applicableIf?: ServiceType[]
+    requiredService?: ServiceType[],
+    discounts?: Discount[]
 }
 
 interface PriceInYear {
@@ -67,12 +84,25 @@ interface PriceInYear {
     price: number
 }
 
+interface Discount {
+    price: number,
+    requiredYear?: ServiceYear,
+    requiredService: ServiceType
+}
+
 const mainServices: Service[] =
 [
     {type: "Photography", priceList: [{year: 2020, price: 1700},{year: 2021, price: 1800},{year:2022, price:1900}]},
-    {type: "VideoRecording", priceList: [{year: 2020, price: 1700},{year: 2021, price: 1800},{year:2022, price:1900}]},
-    //photo+video package: 2020: 2200, 2021: 2300, 2022: 2500
-    {type: "WeddingSession", price: 600}, // 300 if video or photo; 0 if photo in 2022
-    {type: "BlurayPackage", price: 300, applicableIf: ["VideoRecording"]},
-    {type: "TwoDayEvent", price: 400, applicableIf: ["Photography", "VideoRecording"]}
+    {type: "VideoRecording", priceList: [{year: 2020, price: 1700},{year: 2021, price: 1800},{year:2022, price:1900}],
+        discounts: [
+        {price: 500, requiredYear: 2020, requiredService: "Photography"},
+        {price: 500, requiredYear: 2021, requiredService: "Photography"},
+        {price: 600, requiredYear: 2022, requiredService: "Photography"}]},
+    {type: "WeddingSession", price: 600,
+        discounts: [
+        {price: 300, requiredService: "VideoRecording"},
+        {price: 300, requiredService: "Photography"},
+        {price: 0, requiredYear: 2022, requiredService: "Photography"}]},
+    {type: "BlurayPackage", price: 300, requiredService: ["VideoRecording"]},
+    {type: "TwoDayEvent", price: 400, requiredService: ["Photography", "VideoRecording"]}
 ]
